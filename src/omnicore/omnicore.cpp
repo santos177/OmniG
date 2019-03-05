@@ -426,38 +426,38 @@ int64_t mastercore::getTotalTokens(uint32_t propertyId, int64_t* n_owners_total)
     int64_t prev = 0;
     int64_t owners = 0;
     int64_t totalTokens = 0;
-    //
-    // LOCK(cs_tally);
-    //
-    // CMPSPInfo::Entry property;
-    // if (false == _my_sps->getSP(propertyId, property)) {
-    //     return 0; // property ID does not exist
-    // }
-    //
-    // if (!property.fixed || n_owners_total) {
-    //     for (std::unordered_map<std::string, CMPTally>::const_iterator it = mp_tally_map.begin(); it != mp_tally_map.end(); ++it) {
-    //         const CMPTally& tally = it->second;
-    //
-    //         totalTokens += tally.getMoney(propertyId, BALANCE);
-    //         totalTokens += tally.getMoney(propertyId, SELLOFFER_RESERVE);
-    //         totalTokens += tally.getMoney(propertyId, ACCEPT_RESERVE);
-    //         totalTokens += tally.getMoney(propertyId, METADEX_RESERVE);
-    //
-    //         if (prev != totalTokens) {
-    //             prev = totalTokens;
-    //             owners++;
-    //         }
-    //     }
-    //     int64_t cachedFee = p_feecache->GetCachedAmount(propertyId);
-    //     totalTokens += cachedFee;
-    // }
-    //
-    // if (property.fixed) {
-    //     totalTokens = property.num_tokens; // only valid for TX50
-    // }
-    //
-    // if (n_owners_total) *n_owners_total = owners;
-    //
+
+    LOCK(cs_tally);
+
+    CMPSPInfo::Entry property;
+    if (false == _my_sps->getSP(propertyId, property)) {
+        return 0; // property ID does not exist
+    }
+
+    if (!property.fixed || n_owners_total) {
+        for (std::unordered_map<std::string, CMPTally>::const_iterator it = mp_tally_map.begin(); it != mp_tally_map.end(); ++it) {
+            const CMPTally& tally = it->second;
+
+            totalTokens += tally.getMoney(propertyId, BALANCE);
+            totalTokens += tally.getMoney(propertyId, SELLOFFER_RESERVE);
+            totalTokens += tally.getMoney(propertyId, ACCEPT_RESERVE);
+            totalTokens += tally.getMoney(propertyId, METADEX_RESERVE);
+
+            if (prev != totalTokens) {
+                prev = totalTokens;
+                owners++;
+            }
+        }
+        int64_t cachedFee = p_feecache->GetCachedAmount(propertyId);
+        totalTokens += cachedFee;
+    }
+
+    if (property.fixed) {
+        totalTokens = property.num_tokens; // only valid for TX50
+    }
+
+    if (n_owners_total) *n_owners_total = owners;
+
     return totalTokens;
 }
 
@@ -581,8 +581,8 @@ uint32_t mastercore::GetNextPropertyId(bool maineco)
 // Perform any actions that need to be taken when the total number of tokens for a property ID changes
 void NotifyTotalTokensChanged(uint32_t propertyId, int block)
 {
-    // p_feecache->UpdateDistributionThresholds(propertyId);
-    // p_feecache->EvalCache(propertyId, block);
+    p_feecache->UpdateDistributionThresholds(propertyId);
+    p_feecache->EvalCache(propertyId, block);
 }
 
 void CheckWalletUpdate(bool forceUpdate)
@@ -2127,7 +2127,7 @@ void clear_all_state()
     s_stolistdb->Clear();
     t_tradelistdb->Clear();
     p_OmniTXDB->Clear();
-    // p_feecache->Clear();
+    p_feecache->Clear();
     // p_feehistory->Clear();
     assert(p_txlistdb->setDBVersion() == DB_VERSION); // new set of databases, set DB version
     exodus_prev = 0;
@@ -2199,7 +2199,7 @@ int mastercore_init()
     p_txlistdb = new CMPTxList(GetDataDir() / "MP_txlist", fReindex);
     _my_sps = new CMPSPInfo(GetDataDir() / "MP_spinfo", fReindex);
     p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
-    // p_feecache = new COmniFeeCache(GetDataDir() / "OMNI_feecache", fReindex);
+    p_feecache = new COmniFeeCache(GetDataDir() / "OMNI_feecache", fReindex);
     // p_feehistory = new COmniFeeHistory(GetDataDir() / "OMNI_feehistory", fReindex);
 
     MPPersistencePath = GetDataDir() / "MP_persist";
@@ -2310,10 +2310,10 @@ int mastercore_shutdown()
         delete p_OmniTXDB;
         p_OmniTXDB = NULL;
     }
-    // if (p_feecache) {
-    //     delete p_feecache;
-    //     p_feecache = NULL;
-    // }
+    if (p_feecache) {
+        delete p_feecache;
+        p_feecache = NULL;
+    }
     // if (p_feehistory) {
     //     delete p_feehistory;
     //     p_feehistory = NULL;
@@ -3865,7 +3865,7 @@ int mastercore_handler_block_begin(int nBlockPrev, CBlockIndex const * pBlockInd
         p_txlistdb->isMPinBlockRange(pBlockIndex->nHeight, reorgRecoveryMaxHeight, true);
         t_tradelistdb->deleteAboveBlock(pBlockIndex->nHeight);
         s_stolistdb->deleteAboveBlock(pBlockIndex->nHeight);
-        // p_feecache->RollBackCache(pBlockIndex->nHeight);
+        p_feecache->RollBackCache(pBlockIndex->nHeight);
         // p_feehistory->RollBackHistory(pBlockIndex->nHeight);
         reorgRecoveryMaxHeight = 0;
 
