@@ -1,9 +1,9 @@
-// /**
-//  * @file rpc.cpp
-//  *
-//  * This file contains RPC calls for data retrieval.
-//  */
-//
+/**
+ * @file rpc.cpp
+ *
+ * This file contains RPC calls for data retrieval.
+ */
+
 #include "omnicore/rpc.h"
 
 #include "omnicore/activation.h"
@@ -1573,11 +1573,19 @@ UniValue omni_getactivedexsells(const JSONRPCRequest& request)
         int64_t unitPrice = rounduint64(unitPriceFloat * COIN);
         int64_t bitcoinDesired = calculateDesiredBTC(sellOfferAmount, sellBitcoinDesired, amountAvailable);
 
+
         UniValue responseObj(UniValue::VOBJ);
         responseObj.push_back(Pair("txid", txid));
         responseObj.push_back(Pair("propertyid", (uint64_t) propertyId));
         responseObj.push_back(Pair("seller", seller));
-        responseObj.push_back(Pair("amountavailable", FormatDivisibleMP(amountAvailable)));
+
+        // checking if token is divisible or not
+        if(isPropertyDivisible(propertyId))
+            responseObj.push_back(Pair("amountavailable", FormatDivisibleMP(amountAvailable)));
+
+        else
+            responseObj.push_back(Pair("amountavailable", FormatIndivisibleMP(amountAvailable)));
+
         responseObj.push_back(Pair("bitcoindesired", FormatDivisibleMP(bitcoinDesired)));
         responseObj.push_back(Pair("unitprice", FormatDivisibleMP(unitPrice)));
         responseObj.push_back(Pair("timelimit", timeLimit));
