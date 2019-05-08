@@ -1570,7 +1570,9 @@ UniValue omni_getactivedexsells(const JSONRPCRequest& request)
         if ((sellOfferAmount > 0) && (sellBitcoinDesired > 0)) {
             unitPriceFloat = (double) sellBitcoinDesired / (double) sellOfferAmount; // divide by zero protection
         }
-        int64_t unitPrice = rounduint64(unitPriceFloat * COIN);
+
+        PrintToLog("unitPriceFloat %d\n",unitPriceFloat);
+        int64_t unitPrice = rounduint64(unitPriceFloat);
         int64_t bitcoinDesired = calculateDesiredBTC(sellOfferAmount, sellBitcoinDesired, amountAvailable);
 
 
